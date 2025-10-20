@@ -54,13 +54,15 @@ Run `npm run dev` from the root to start both frontend and backend servers.
 
 ## Recent Changes
 ### October 20, 2025
-- ✅ Set up PostgreSQL database with complete schema
+- ✅ Set up PostgreSQL database with complete schema (users, projects, posts tables)
 - ✅ Installed all dependencies (Node.js 20, React, Express, etc.)
 - ✅ Configured environment variables for development
-- ✅ Updated server to serve static files in production mode
-- ✅ Configured deployment settings for Replit (VM deployment)
+- ✅ **Configured Google OAuth authentication** with secure credentials
+- ✅ Updated server to serve static files in production mode with API route protection
+- ✅ Configured deployment settings for Replit (VM deployment with build step)
 - ✅ Set up development workflow with concurrently running frontend and backend
 - ✅ Verified database connection and application is running successfully
+- ✅ Fixed production route fallback to prevent hijacking API requests
 
 ### Initial Setup
 - Initial project setup with full-stack architecture
