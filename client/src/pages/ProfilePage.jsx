@@ -74,7 +74,7 @@ function DraggableInterest({ id, interest, primaryColor }) {
   )
 }
 
-function DraggableProject({ project, isOwner, primaryColor }) {
+function DraggableProject({ project, isOwner, primaryColor, showDragHandle }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
   
   const style = {
@@ -85,7 +85,7 @@ function DraggableProject({ project, isOwner, primaryColor }) {
 
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      {isOwner && (
+      {showDragHandle && (
         <div
           {...attributes}
           {...listeners}
@@ -99,7 +99,7 @@ function DraggableProject({ project, isOwner, primaryColor }) {
   )
 }
 
-function DraggablePost({ post, isOwner, primaryColor }) {
+function DraggablePost({ post, isOwner, primaryColor, showDragHandle }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: post.id })
   
   const style = {
@@ -110,7 +110,7 @@ function DraggablePost({ post, isOwner, primaryColor }) {
 
   return (
     <div ref={setNodeRef} style={style} className="relative group">
-      {isOwner && (
+      {showDragHandle && (
         <div
           {...attributes}
           {...listeners}
@@ -130,10 +130,9 @@ export default function ProfilePage({ currentUser }) {
   const [projects, setProjects] = useState([])
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editMode, setEditMode] = useState(false)
+  const [mode, setMode] = useState('view') // 'view', 'edit', 'customize'
   const [showProjectModal, setShowProjectModal] = useState(false)
   const [showPostModal, setShowPostModal] = useState(false)
-  const [showCustomization, setShowCustomization] = useState(false)
   const [theme, setTheme] = useState({
     primaryColor: '#ea580c',
     backgroundColor: '#f9fafb',
@@ -301,7 +300,7 @@ export default function ProfilePage({ currentUser }) {
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
-              {isOwnProfile && (
+              {isOwnProfile && mode === 'edit' && (
                 <button
                   onClick={() => setShowProjectModal(true)}
                   className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all hover:opacity-90"
@@ -323,14 +322,14 @@ export default function ProfilePage({ currentUser }) {
                 <SortableContext
                   items={projects.map(p => p.id)}
                   strategy={verticalListSortingStrategy}
-                  disabled={!isOwnProfile}
+                  disabled={mode !== 'customize'}
                 >
                   <div className="space-y-4">
                     {projects.map(project => (
                       <DraggableProject
                         key={project.id}
                         project={project}
-                        isOwner={isOwnProfile}
+                        isOwner={isOwnProfile && mode === 'edit'}
                         primaryColor={theme.primaryColor}
                       />
                     ))}
@@ -350,7 +349,7 @@ export default function ProfilePage({ currentUser }) {
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold text-gray-900">Feed</h2>
-              {isOwnProfile && (
+              {isOwnProfile && mode === 'edit' && (
                 <button
                   onClick={() => setShowPostModal(true)}
                   className="transition-colors"
@@ -434,19 +433,39 @@ export default function ProfilePage({ currentUser }) {
             {isOwnProfile && (
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowCustomization(!showCustomization)}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all hover:opacity-90"
-                  style={{ backgroundColor: theme.primaryColor }}
+                  onClick={() => setMode('view')}
+                  className={`px-4 py-2 rounded-lg transition-all ${
+                    mode === 'view' 
+                      ? 'text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  style={mode === 'view' ? { backgroundColor: theme.primaryColor } : {}}
                 >
-                  <Palette size={18} />
-                  Customize
+                  View
                 </button>
                 <button
-                  onClick={() => setEditMode(!editMode)}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  onClick={() => setMode('edit')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    mode === 'edit' 
+                      ? 'text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  style={mode === 'edit' ? { backgroundColor: theme.primaryColor } : {}}
                 >
                   <Edit2 size={18} />
                   Edit
+                </button>
+                <button
+                  onClick={() => setMode('customize')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                    mode === 'customize' 
+                      ? 'text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  style={mode === 'customize' ? { backgroundColor: theme.primaryColor } : {}}
+                >
+                  <Palette size={18} />
+                  Customize
                 </button>
               </div>
             )}
@@ -494,7 +513,7 @@ export default function ProfilePage({ currentUser }) {
           {user.skills && user.skills.length > 0 && (
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Skills {isOwnProfile && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
+                Skills {isOwnProfile && mode === 'customize' && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
               </h3>
               <DndContext
                 sensors={sensors}
@@ -504,7 +523,7 @@ export default function ProfilePage({ currentUser }) {
                 <SortableContext
                   items={user.skills}
                   strategy={verticalListSortingStrategy}
-                  disabled={!isOwnProfile}
+                  disabled={mode !== 'customize'}
                 >
                   <div className="flex flex-wrap gap-2">
                     {user.skills.map((skill, index) => (
@@ -524,7 +543,7 @@ export default function ProfilePage({ currentUser }) {
           {user.interests && user.interests.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Interests {isOwnProfile && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
+                Interests {isOwnProfile && mode === 'customize' && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
               </h3>
               <DndContext
                 sensors={sensors}
@@ -534,7 +553,7 @@ export default function ProfilePage({ currentUser }) {
                 <SortableContext
                   items={user.interests}
                   strategy={verticalListSortingStrategy}
-                  disabled={!isOwnProfile}
+                  disabled={mode !== 'customize'}
                 >
                   <div className="flex flex-wrap gap-2">
                     {user.interests.map((interest, index) => (
@@ -561,7 +580,7 @@ export default function ProfilePage({ currentUser }) {
           <SortableContext
             items={theme.sectionOrder}
             strategy={verticalListSortingStrategy}
-            disabled={!isOwnProfile}
+            disabled={mode !== 'customize'}
           >
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {theme.sectionOrder.map(sectionId => renderSection(sectionId))}
@@ -570,26 +589,26 @@ export default function ProfilePage({ currentUser }) {
         </DndContext>
       </div>
 
-      {editMode && (
+      {mode === 'edit' && (
         <EditModal
           user={user}
-          onClose={() => setEditMode(false)}
+          onClose={() => setMode('view')}
           onUpdate={(updatedUser) => {
             setUser(updatedUser)
-            setEditMode(false)
+            setMode('view')
           }}
         />
       )}
 
-      {showCustomization && (
+      {mode === 'customize' && (
         <CustomizationPanel
           theme={theme}
           onThemeUpdate={(newTheme) => {
             setTheme(newTheme)
-            setShowCustomization(false)
+            setMode('view')
           }}
           userId={user.id}
-          onClose={() => setShowCustomization(false)}
+          onClose={() => setMode('view')}
         />
       )}
 
