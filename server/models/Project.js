@@ -1,23 +1,23 @@
 import pool from '../config/database.js';
 
 export const createProject = async (projectData) => {
-  const { user_id, title, description, tags, status, image_url, github_url, demo_url } = projectData;
+  const { user_id, title, description, tags, status, image_url, github_url, demo_url, display_order } = projectData;
 
   const query = `
-    INSERT INTO projects (user_id, title, description, tags, status, image_url, github_url, demo_url)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO projects (user_id, title, description, tags, status, image_url, github_url, demo_url, display_order)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
 
   const result = await pool.query(query, [
     user_id, title, description, tags || [], status || 'In Progress',
-    image_url, github_url, demo_url
+    image_url, github_url, demo_url, display_order || 0
   ]);
   return result.rows[0];
 };
 
 export const getProjectsByUserId = async (userId) => {
-  const query = 'SELECT * FROM projects WHERE user_id = $1 ORDER BY created_at DESC';
+  const query = 'SELECT * FROM projects WHERE user_id = $1 ORDER BY display_order, created_at DESC';
   const result = await pool.query(query, [userId]);
   return result.rows;
 };

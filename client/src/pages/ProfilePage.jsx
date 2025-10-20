@@ -2,11 +2,127 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import { motion } from 'framer-motion'
-import { Github, Linkedin, Mail, Edit2, Plus, Palette } from 'lucide-react'
+import { Github, Linkedin, Mail, Edit2, Plus, Palette, GripVertical } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import ProjectCard from '../components/ProjectCard'
 import FeedPost from '../components/FeedPost'
 import EditModal from '../components/EditModal'
 import CustomizationPanel from '../components/CustomizationPanel'
+
+function DraggableSkill({ id, skill, primaryColor }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <span
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm cursor-move hover:shadow-md transition-shadow"
+    >
+      {skill}
+    </span>
+  )
+}
+
+function DraggableInterest({ id, interest, primaryColor }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const combinedStyle = {
+    backgroundColor: `${primaryColor}33`,
+    color: primaryColor,
+    ...style
+  }
+
+  return (
+    <span
+      ref={setNodeRef}
+      style={combinedStyle}
+      {...attributes}
+      {...listeners}
+      className="px-3 py-1 rounded-full text-sm text-white cursor-move hover:shadow-md transition-shadow"
+    >
+      {interest}
+    </span>
+  )
+}
+
+function DraggableProject({ project, isOwner, primaryColor }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {isOwner && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -left-6 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        >
+          <GripVertical className="text-gray-400" size={20} />
+        </div>
+      )}
+      <ProjectCard project={project} isOwner={isOwner} />
+    </div>
+  )
+}
+
+function DraggablePost({ post, isOwner, primaryColor }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: post.id })
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="relative group">
+      {isOwner && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -left-6 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        >
+          <GripVertical className="text-gray-400" size={16} />
+        </div>
+      )}
+      <FeedPost post={post} isOwner={isOwner} />
+    </div>
+  )
+}
 
 export default function ProfilePage({ currentUser }) {
   const { username } = useParams()
@@ -21,10 +137,17 @@ export default function ProfilePage({ currentUser }) {
   const [theme, setTheme] = useState({
     primaryColor: '#ea580c',
     backgroundColor: '#f9fafb',
-    sectionOrder: ['profile', 'projects', 'feed']
+    sectionOrder: ['projects', 'feed']
   })
 
   const isOwnProfile = currentUser && currentUser.username === username
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   useEffect(() => {
     fetchProfile()
@@ -44,8 +167,13 @@ export default function ProfilePage({ currentUser }) {
 
       const userData = userRes.data.user
       setUser(userData)
-      setProjects(projectsRes.data.projects || [])
-      setPosts(postsRes.data.posts || [])
+      
+      // Sort by display_order
+      const sortedProjects = (projectsRes.data.projects || []).sort((a, b) => a.display_order - b.display_order)
+      const sortedPosts = (postsRes.data.posts || []).sort((a, b) => a.display_order - b.display_order)
+      
+      setProjects(sortedProjects)
+      setPosts(sortedPosts)
       
       if (userData.theme_preferences) {
         setTheme({
@@ -60,10 +188,74 @@ export default function ProfilePage({ currentUser }) {
     }
   }
 
+  const handleDragEnd = async (event, type) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    if (type === 'skills') {
+      const oldIndex = user.skills.findIndex(s => s === active.id)
+      const newIndex = user.skills.findIndex(s => s === over.id)
+      const newSkills = arrayMove(user.skills, oldIndex, newIndex)
+      
+      const updatedUser = { ...user, skills: newSkills }
+      setUser(updatedUser)
+      
+      await axios.put(`/users/${user.id}`, { skills: newSkills })
+    } else if (type === 'interests') {
+      const oldIndex = user.interests.findIndex(i => i === active.id)
+      const newIndex = user.interests.findIndex(i => i === over.id)
+      const newInterests = arrayMove(user.interests, oldIndex, newIndex)
+      
+      const updatedUser = { ...user, interests: newInterests }
+      setUser(updatedUser)
+      
+      await axios.put(`/users/${user.id}`, { interests: newInterests })
+    } else if (type === 'projects') {
+      const oldIndex = projects.findIndex(p => p.id === active.id)
+      const newIndex = projects.findIndex(p => p.id === over.id)
+      const newProjects = arrayMove(projects, oldIndex, newIndex)
+      
+      // Update display_order for all projects
+      const updatedProjects = newProjects.map((p, index) => ({ ...p, display_order: index }))
+      setProjects(updatedProjects)
+      
+      // Save to database
+      await Promise.all(updatedProjects.map(p => 
+        axios.put(`/projects/${p.id}`, { display_order: p.display_order })
+      ))
+    } else if (type === 'posts') {
+      const oldIndex = posts.findIndex(p => p.id === active.id)
+      const newIndex = posts.findIndex(p => p.id === over.id)
+      const newPosts = arrayMove(posts, oldIndex, newIndex)
+      
+      // Update display_order for all posts
+      const updatedPosts = newPosts.map((p, index) => ({ ...p, display_order: index }))
+      setPosts(updatedPosts)
+      
+      // Save to database
+      await Promise.all(updatedPosts.map(p => 
+        axios.put(`/posts/${p.id}`, { display_order: p.display_order })
+      ))
+    } else if (type === 'sections') {
+      const oldIndex = theme.sectionOrder.indexOf(active.id)
+      const newIndex = theme.sectionOrder.indexOf(over.id)
+      const newSectionOrder = arrayMove(theme.sectionOrder, oldIndex, newIndex)
+      
+      const newTheme = { ...theme, sectionOrder: newSectionOrder }
+      setTheme(newTheme)
+      
+      await axios.put(`/users/${user.id}`, { theme_preferences: newTheme })
+    }
+  }
+
   const handleAddProject = async (projectData) => {
     try {
-      const response = await axios.post('/projects', projectData)
-      setProjects([response.data.project, ...projects])
+      const response = await axios.post('/projects', {
+        ...projectData,
+        display_order: projects.length
+      })
+      setProjects([...projects, response.data.project])
       setShowProjectModal(false)
     } catch (error) {
       console.error('Error adding project:', error)
@@ -72,8 +264,11 @@ export default function ProfilePage({ currentUser }) {
 
   const handleAddPost = async (postData) => {
     try {
-      const response = await axios.post('/posts', postData)
-      setPosts([response.data.post, ...posts])
+      const response = await axios.post('/posts', {
+        ...postData,
+        display_order: posts.length
+      })
+      setPosts([...posts, response.data.post])
       setShowPostModal(false)
     } catch (error) {
       console.error('Error adding post:', error)
@@ -96,9 +291,112 @@ export default function ProfilePage({ currentUser }) {
     )
   }
 
+  const renderSection = (sectionId) => {
+    if (sectionId === 'projects') {
+      return (
+        <div key="projects" className="lg:col-span-2">
+          <div 
+            className="rounded-2xl shadow-lg p-6 mb-6"
+            style={{ backgroundColor: theme.cardBackground || '#ffffff' }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowProjectModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all hover:opacity-90"
+                  style={{ backgroundColor: theme.primaryColor }}
+                >
+                  <Plus size={18} />
+                  Add Project
+                </button>
+              )}
+            </div>
+            {projects.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No projects yet</p>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => handleDragEnd(e, 'projects')}
+              >
+                <SortableContext
+                  items={projects.map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                  disabled={!isOwnProfile}
+                >
+                  <div className="space-y-4">
+                    {projects.map(project => (
+                      <DraggableProject
+                        key={project.id}
+                        project={project}
+                        isOwner={isOwnProfile}
+                        primaryColor={theme.primaryColor}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </div>
+      )
+    } else if (sectionId === 'feed') {
+      return (
+        <div key="feed">
+          <div 
+            className="rounded-2xl shadow-lg p-6"
+            style={{ backgroundColor: theme.cardBackground || '#ffffff' }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Feed</h2>
+              {isOwnProfile && (
+                <button
+                  onClick={() => setShowPostModal(true)}
+                  className="transition-colors"
+                  style={{ color: theme.primaryColor }}
+                >
+                  <Plus size={20} />
+                </button>
+              )}
+            </div>
+            {posts.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No posts yet</p>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => handleDragEnd(e, 'posts')}
+              >
+                <SortableContext
+                  items={posts.map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                  disabled={!isOwnProfile}
+                >
+                  <div className="space-y-4">
+                    {posts.map(post => (
+                      <DraggablePost
+                        key={post.id}
+                        post={post}
+                        isOwner={isOwnProfile}
+                        primaryColor={theme.primaryColor}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor }}>
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -195,95 +493,81 @@ export default function ProfilePage({ currentUser }) {
 
           {user.skills && user.skills.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Skills</h3>
-              <div className="flex flex-wrap gap-2">
-                {user.skills.map((skill, index) => (
-                  <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                    {skill}
-                  </span>
-                ))}
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Skills {isOwnProfile && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
+              </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => handleDragEnd(e, 'skills')}
+              >
+                <SortableContext
+                  items={user.skills}
+                  strategy={verticalListSortingStrategy}
+                  disabled={!isOwnProfile}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {user.skills.map((skill, index) => (
+                      <DraggableSkill
+                        key={skill}
+                        id={skill}
+                        skill={skill}
+                        primaryColor={theme.primaryColor}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           )}
 
           {user.interests && user.interests.length > 0 && (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Interests</h3>
-              <div className="flex flex-wrap gap-2">
-                {user.interests.map((interest, index) => (
-                  <span 
-                    key={index} 
-                    className="px-3 py-1 rounded-full text-sm text-white"
-                    style={{ backgroundColor: `${theme.primaryColor}33`, color: theme.primaryColor }}
-                  >
-                    {interest}
-                  </span>
-                ))}
-              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Interests {isOwnProfile && <span className="text-sm text-gray-500 font-normal">(drag to reorder)</span>}
+              </h3>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(e) => handleDragEnd(e, 'interests')}
+              >
+                <SortableContext
+                  items={user.interests}
+                  strategy={verticalListSortingStrategy}
+                  disabled={!isOwnProfile}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {user.interests.map((interest, index) => (
+                      <DraggableInterest
+                        key={interest}
+                        id={interest}
+                        interest={interest}
+                        primaryColor={theme.primaryColor}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           )}
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <div 
-              className="rounded-2xl shadow-lg p-6 mb-6"
-              style={{ backgroundColor: theme.cardBackground || '#ffffff' }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowProjectModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all hover:opacity-90"
-                    style={{ backgroundColor: theme.primaryColor }}
-                  >
-                    <Plus size={18} />
-                    Add Project
-                  </button>
-                )}
-              </div>
-              <div className="space-y-4">
-                {projects.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No projects yet</p>
-                ) : (
-                  projects.map(project => (
-                    <ProjectCard key={project.id} project={project} isOwner={isOwnProfile} />
-                  ))
-                )}
-              </div>
+        {/* Draggable Sections */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e) => handleDragEnd(e, 'sections')}
+        >
+          <SortableContext
+            items={theme.sectionOrder}
+            strategy={verticalListSortingStrategy}
+            disabled={!isOwnProfile}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {theme.sectionOrder.map(sectionId => renderSection(sectionId))}
             </div>
-          </div>
-
-          <div>
-            <div 
-              className="rounded-2xl shadow-lg p-6"
-              style={{ backgroundColor: theme.cardBackground || '#ffffff' }}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">Feed</h2>
-                {isOwnProfile && (
-                  <button
-                    onClick={() => setShowPostModal(true)}
-                    className="transition-colors"
-                    style={{ color: theme.primaryColor }}
-                  >
-                    <Plus size={20} />
-                  </button>
-                )}
-              </div>
-              <div className="space-y-4">
-                {posts.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No posts yet</p>
-                ) : (
-                  posts.map(post => (
-                    <FeedPost key={post.id} post={post} isOwner={isOwnProfile} />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {editMode && (

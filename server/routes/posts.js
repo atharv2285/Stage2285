@@ -1,5 +1,5 @@
 import express from 'express';
-import { createPost, getPostsByUserId, deletePost } from '../models/Post.js';
+import { createPost, getPostsByUserId, updatePost, deletePost } from '../models/Post.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -30,9 +30,25 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-router.delete('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const post = await updatePost(parseInt(id), req.user.id, req.body);
+
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found or unauthorized' });
+    }
+
+    res.json({ post });
+  } catch (error) {
+    console.error('Update post error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id} = req.params;
     const post = await deletePost(parseInt(id), req.user.id);
 
     if (!post) {
