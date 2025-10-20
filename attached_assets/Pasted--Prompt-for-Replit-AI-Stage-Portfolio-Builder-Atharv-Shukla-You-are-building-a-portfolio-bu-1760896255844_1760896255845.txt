@@ -1,0 +1,193 @@
+🧠 Prompt for Replit AI — “Stage Portfolio Builder” (Atharv Shukla)
+
+You are building a portfolio builder web app called Stage, based on the UI already designed and imported from the connected Lovable Git repo.
+
+The app helps users (mainly students and early engineers) create interactive builder-style profiles — not static resumes.
+
+Please set up a full-stack implementation (React + Node.js + Express + PostgreSQL or MongoDB) for the following flows:
+
+🌐 1️⃣ Authentication & Onboarding
+
+Implement Google OAuth and email/password login using Passport.js or NextAuth (if in Next.js).
+
+After first login, redirect to Profile Setup page.
+
+Store sessions with cookies (JWT or express-session).
+
+Database table/model: users
+
+id
+
+name
+
+email
+
+avatar_url
+
+stage_level (“Explorer”, “Builder”, “Emerging Engineer”, etc.)
+
+bio
+
+interests (array)
+
+skills (array)
+
+created_at
+
+👤 2️⃣ Profile Setup Flow
+
+After login, show a profile setup form:
+
+Name (auto-filled from Google)
+
+Tagline (short 1-liner like “Building drone ops systems for India 🚀”)
+
+Current college/year
+
+Core skills (multi-select)
+
+Interests (tags)
+
+Upload profile picture
+
+Select Stage Level (dropdown)
+
+On submit → store in DB → redirect to /profile/:username
+
+🧩 3️⃣ Portfolio Page
+
+Dynamic, builder-style profile based on your UI mockup from Lovable.
+
+Sections:
+
+Header / Identity
+
+Name, tagline, avatar, stage badge
+
+Socials (GitHub, LinkedIn, Email)
+
+Active Projects
+
+Cards showing project name, description, tags, and status
+
+Each project expandable into logs (text or media)
+
+Allow users to add project, edit project, and attach images/videos/notes
+
+Store in DB table/model projects
+
+Experience Timeline
+
+Internships, positions, projects shown chronologically
+
+Auto-render from user’s data
+
+Skills & Interests
+
+Tag-based display (from setup)
+
+Editable via modal
+
+Feed / Notes Section
+
+Small text posts or reflections (think of a Notion + Twitter hybrid)
+
+DB model posts: user_id, content, media_url, created_at
+
+Edit Button
+
+Appears if the logged-in user is viewing their own page
+
+Clicking opens inline edit mode for each section
+
+⚙️ 4️⃣ Backend Endpoints (Express)
+
+Create a REST API (or GraphQL if preferred):
+
+POST /api/auth/login → handles OAuth/login
+
+POST /api/users/setup → saves initial setup data
+
+GET /api/users/:id → fetch profile
+
+PUT /api/users/:id → update profile info
+
+POST /api/projects → create project
+
+GET /api/projects/:userId → fetch all projects
+
+PUT /api/projects/:id → update project
+
+POST /api/posts → create post
+
+GET /api/posts/:userId → fetch posts
+
+🎨 5️⃣ Frontend Structure (React)
+
+src/App.js → Router setup (React Router)
+
+/ → Home (login/signup)
+
+/setup → Profile setup form
+
+/profile/:username → Portfolio page
+
+Components:
+
+Login.js
+
+SetupPage.js
+
+ProfilePage.js
+
+ProjectCard.js
+
+EditModal.js
+
+FeedPost.js
+
+Use TailwindCSS (or the Lovable styles) for design.
+
+Add smooth animations with Framer Motion.
+
+🧠 6️⃣ Bonus (Optional)
+
+Allow users to choose a theme (light/orange, dark).
+
+Add auto-save for edits.
+
+Add a public link generator → stage.io/atharv-shukla format.
+
+Add AI “Reflect” feature → summarizes user’s latest work updates (basic OpenAI API integration).
+
+📦 7️⃣ Environment Setup
+
+Node.js 18+
+
+Express for backend
+
+MongoDB (via Mongoose) or PostgreSQL (via Prisma)
+
+CORS enabled for frontend
+
+Store .env variables for OAuth keys and DB URL.
+
+✅ Deliverables for Replit
+
+Working authentication flow (Google + email)
+
+Profile setup + edit forms
+
+Persistent user data in DB
+
+Interactive portfolio page reflecting live data
+
+Minimalist white/orange UI (Manrope + Proxima Nova fonts)
+
+Deployed version accessible via Replit URL
+
+Goal:
+Make it feel like a cross between GitHub (for structure), Notion (for updates), and ProductHunt (for energy) — a live, editable Stage profile builder for college engineers.
+
+Would you like me to tailor this Replit prompt for a specific stack (e.g. React + Express + MongoDB vs Next.js + Prisma + PostgreSQL)?
+That way I can give you a version optimized for how Replit will auto-build and connect the database.
