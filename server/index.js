@@ -8,6 +8,11 @@ import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import projectsRoutes from './routes/projects.js';
 import postsRoutes from './routes/posts.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -47,11 +52,22 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Stage API is running' });
 });
 
+// Serve static files from the React app in production
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '../client/dist');
+  app.use(express.static(clientBuildPath));
+  
+  // All non-API routes should serve the React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientBuildPath, 'index.html'));
+  });
+}
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
